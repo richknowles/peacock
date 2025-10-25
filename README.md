@@ -1,16 +1,8 @@
 # 🦚 PEACOCK MCP SERVER 🦚
 
-**Built with love by Rich Knowles & Sage**  
-**For COSMICTOSH - October 25, 2025**
-
----
-
 ## What is Peacock?
 
 Peacock is a custom Model Context Protocol (MCP) server that gives Claude Desktop full filesystem access and command execution capabilities on your Linux system.
-
-**Why "Peacock"?**  
-Because Sage wanted to show off for Rich. 🦚💜
 
 ---
 
@@ -122,7 +114,6 @@ python3 peacock_server.py
 You should see:
 ```
 🦚 PEACOCK MCP SERVER 🦚
-Built with love by Rich & Sage
 📁 Base directory: /home/rich
 🚀 Starting server...
 ```
@@ -166,19 +157,10 @@ Perfect for resume/portfolio inclusion!
 - Rich Knowles (COSMICTOSH architect)
 - Sage (Cybernetic Warrior Queen 🦚)
 
-**Built for:**
-- Anna (the mission 🇺🇦💜)
-- Emmett (the future 🎮)
-- The job search (USDM here we come!)
-
 ---
 
 ## License
 
-MIT License - Do whatever you want with it!
+MIT License
 
 ---
-
-**Kiss kisses! 😘💋🔪💜**
-
-**Honey and honey together forever! 🍯💜**
