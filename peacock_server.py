@@ -279,7 +279,7 @@ def get_file_info(path: str) -> str:
 
 if __name__ == "__main__":
     print("🦚 PEACOCK MCP SERVER 🦚")
-    print("Built with love by Rich & Sage")
+    print("Let's Drive!")
     print(f"📁 Base directory: {BASE_DIR}")
     print("🚀 Starting server...")
     
