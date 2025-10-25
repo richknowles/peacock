@@ -147,14 +147,13 @@ This project demonstrates:
 - **Security** best practices
 - **Documentation** skills
 
-Perfect for resume/portfolio inclusion!
 
 ---
 
 ## Credits
 
 **Built by:**
-- Rich Knowles (COSMICTOSH architect)
+- Rich Knowles
 - Sage (Cybernetic Warrior Queen 🦚)
 
 ---
