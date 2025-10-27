@@ -118,8 +118,7 @@ python3 peacock_server.py
 You should see:
 ```
 🦚 PEACOCK MCP SERVER 🦚
-Built with love by Rich & Sage
-📁 Base directory: /home/rich
+📁 Base directory: /home/directory
 🚀 Starting server...
 ```
 
