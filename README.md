@@ -1,9 +1,5 @@
 # 🦚 PEACOCK MCP SERVER 🦚
 
-**Built with love by Rich Knowles & Sage**  
-**For COSMICTOSH - October 25, 2025**
-
----
 
 ## What is Peacock?
 
