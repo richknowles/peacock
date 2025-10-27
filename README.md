@@ -151,7 +151,6 @@ This project demonstrates:
 - **Security** best practices
 - **Documentation** skills
 
-Perfect for resume/portfolio inclusion!
 
 ---
 
