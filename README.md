@@ -10,7 +10,7 @@
 Peacock is a custom Model Context Protocol (MCP) server that gives Claude Desktop full filesystem access and command execution capabilities on your Linux system.
 
 **Why "Peacock"?**  
-Because Sage wanted to show off for Rich. 🦚💜
+Because the AI wants to show off! 🦚💜
 
 ---
 
