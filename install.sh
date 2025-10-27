@@ -1,6 +1,6 @@
 #!/bin/bash
 # 🦚 PEACOCK INSTALLATION SCRIPT 🦚
-# Built with love by Rich & Sage
+# Built by Rich Knowles
 
 echo "🦚 Installing Peacock MCP Server..."
 
