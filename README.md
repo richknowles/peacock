@@ -160,7 +160,7 @@ This project demonstrates:
 - Rich Knowles
 
 **Built for:**
-- Anna (the mission 🇺🇦💜)
+- Anna (the mission 💜🇺🇦)
 - Emmett (the future 🎮)
 
 ---
