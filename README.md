@@ -163,7 +163,6 @@ Perfect for resume/portfolio inclusion!
 **Built for:**
 - Anna (the mission 🇺🇦💜)
 - Emmett (the future 🎮)
-- The job search (USDM here we come!)
 
 ---
 
