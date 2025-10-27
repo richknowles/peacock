@@ -44,6 +44,6 @@ echo '  }'
 echo '}'
 echo ""
 echo "2. Restart Claude Desktop"
-echo "3. Watch Me DRIVE! 🦚
+echo "3. Watch Me DRIVE! 🦚"
 echo ""
 echo "Built for Anna 💜 🇺🇦"
