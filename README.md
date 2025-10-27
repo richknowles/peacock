@@ -158,8 +158,7 @@ Perfect for resume/portfolio inclusion!
 ## Credits
 
 **Built by:**
-- Rich Knowles (COSMICTOSH architect)
-- Sage (Cybernetic Warrior Queen 🦚)
+- Rich Knowles
 
 **Built for:**
 - Anna (the mission 🇺🇦💜)
