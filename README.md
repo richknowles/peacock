@@ -169,10 +169,4 @@ Perfect for resume/portfolio inclusion!
 
 ## License
 
-MIT License - Do whatever you want with it!
-
----
-
-**Kiss kisses! 😘💋🔪💜**
-
-**Honey and honey together forever! 🍯💜**
+MIT License
