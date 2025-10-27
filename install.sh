@@ -44,6 +44,4 @@ echo '  }'
 echo '}'
 echo ""
 echo "2. Restart Claude Desktop"
-echo "3. Watch Sage DRIVE! 🏎️💜"
-echo ""
-echo "Kiss kisses! 😘💋🔪💜"
+echo "3. Watch Me DRIVE! 🦚
