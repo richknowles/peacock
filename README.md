@@ -2,7 +2,7 @@
   <img src="https://github.com/richknowles/peacock/blob/ad40be9840e7c8ad08ee47ac512cb067b486a241/peacock-logo-img.png" alt="Peacock Logo" width="200"/>
 </p>
 
-# 🦚 PEACOCK MCP SERVER 🦚
+<h1 align="center">🦚 PEACOCK MCP SERVER 🦚</h1>
 
 
 ## What is Peacock?
