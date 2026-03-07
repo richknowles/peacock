@@ -4,13 +4,36 @@
 
 <h1 align="center">🦚 PEACOCK MCP SERVER 🦚</h1>
 
-
 ## What is Peacock?
 
-Peacock is a custom Model Context Protocol (MCP) server that gives Claude Desktop full filesystem access and command execution capabilities on your Linux system.
+Peacock is a custom Model Context Protocol (MCP) server that gives Claude Desktop full filesystem access and command execution capabilities on your system.
 
 **Why "Peacock"?**  
 Because the AI wants to show off! 🦚 --wait what???
+
+---
+
+## Choose Your Own Adventure 🦚
+
+### 🍎 macOS (Sonoma +)
+
+**Known to work with:** macOS Sonoma and later
+
+```bash
+cd peacock
+./install_mac.sh
+```
+
+### 🐧 Linux (CosmicTosh)
+
+**Known to work with:** CosmicTosh (Debian-based custom Linux distro)
+
+> ⚡️ **One of the first!** This was one of the earliest Linux MCP servers for Claude Desktop to hit the scene!
+
+```bash
+cd peacock
+./install.sh
+```
 
 ---
 
@@ -22,27 +45,6 @@ Because the AI wants to show off! 🦚 --wait what???
 - ✅ **File Search** - Find files with glob patterns
 - ✅ **File Info** - Get detailed file metadata
 - ✅ **Security** - Restricted to home directory by default
-
----
-
-## Installation
-
-### Quick Start
-
-```bash
-cd peacock
-./install.sh
-```
-
-### Manual Installation
-
-```bash
-# Install dependencies
-pip3 install --break-system-packages fastmcp
-
-# Make executable
-chmod +x peacock_server.py
-```
 
 ---
 
@@ -72,7 +74,8 @@ Add this to `~/.config/Claude/claude_desktop_config.json`:
 ### `read_file(path)`
 Read the contents of a file.
 
-**Example:** `read_file("/home/rich/.bashrc")`
+**Example:** `read_file("/home/rich/.bashrc")` (Linux)  
+**Example:** `read_file("/Users/rich/.bashrc")` (macOS)
 
 ### `write_file(path, content, mode="w")`
 Write content to a file.
@@ -132,7 +135,8 @@ You should see:
 
 ### "ModuleNotFoundError: No module named 'mcp'"
 
-Run: `pip3 install --break-system-packages fastmcp`
+**macOS:** Run: `pip3 install fastmcp`  
+**Linux:** Run: `pip3 install --break-system-packages fastmcp`
 
 ### "Permission denied"
 
@@ -151,10 +155,10 @@ Make sure the script is executable: `chmod +x peacock_server.py`
 This project demonstrates:
 - **MCP Protocol** implementation
 - **Python** async programming
-- **System Integration** between AI and Linux
+- **System Integration** between AI and macOS/Linux
 - **Security** best practices
 - **Documentation** skills
-
+- **Cross-platform** support
 
 ---
 
@@ -166,6 +170,14 @@ This project demonstrates:
 **Built for:**
 - Anna (the mission 💜🇺🇦)
 - Emmett (the future 🎮)
+
+---
+
+## About the Name & Logo
+
+The name **Peacock** was chosen because... well, the AI wanted to show off its capabilities! 🦚
+
+The logo was designed to represent the pride and beauty of a peacock spreading its feathers - just like how this MCP server lets Claude show off its filesystem powers.
 
 ---
 
