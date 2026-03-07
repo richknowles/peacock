@@ -1,16 +1,8 @@
 #!/bin/bash
-# 🦚 PEACOCK INSTALLATION SCRIPT 🦚
+# 🦚 PEACOCK INSTALLATION SCRIPT - macOS Edition 🦚
 # Built by Rich Knowles
-# Supports Linux and macOS
 
-PLATFORM="$(uname -s)"
-
-if [ "$PLATFORM" = "Darwin" ]; then
-    echo "🍎 Detected macOS - using macOS installer"
-    exec ./install_mac.sh
-fi
-
-echo "🦚 Installing Peacock MCP Server..."
+echo "🦚 Installing Peacock MCP Server for macOS..."
 
 # Check if Python 3 is installed
 if ! command -v python3 &> /dev/null; then
@@ -20,9 +12,9 @@ fi
 
 echo "✅ Python 3 found: $(python3 --version)"
 
-# Install Python dependencies
+# Install Python dependencies (macOS doesn't need --break-system-packages)
 echo "📦 Installing Python dependencies..."
-pip3 install --break-system-packages -r requirements.txt
+pip3 install -r requirements.txt
 
 if [ $? -ne 0 ]; then
     echo "❌ Failed to install dependencies"
@@ -35,7 +27,7 @@ echo "✅ Dependencies installed"
 chmod +x peacock_server.py
 
 echo ""
-echo "🎉 Peacock installed successfully!"
+echo "🎉 Peacock installed successfully on macOS!"
 echo ""
 echo "📝 Next steps:"
 echo "1. Add this to ~/.config/Claude/claude_desktop_config.json:"
