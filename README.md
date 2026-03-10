@@ -154,6 +154,7 @@ Make sure the script is executable: `chmod +x peacock_server.py`
 
 This project demonstrates:
 - **MCP Protocol** implementation
+- **Agentic AI** is possible and can simultaneously be made to be secure
 - **Python** async programming
 - **System Integration** between AI and macOS/Linux
 - **Security** best practices
@@ -165,19 +166,20 @@ This project demonstrates:
 ## Credits
 
 **Built by:**
+
 - Rich Knowles
 
 **Built for:**
-- Anna (the mission 💜🇺🇦)
+
 - Emmett (the future 🎮)
 
 ---
 
 ## About the Name & Logo
 
-The name **Peacock** was chosen because... well, the AI wanted to show off its capabilities! 🦚
+The name **Peacock** was chosen because... it makes sense and who doesn't love a good peacock? 🦚
 
-The logo was designed to represent the pride and beauty of a peacock spreading its feathers - just like how this MCP server lets Claude show off its filesystem powers.
+The logo was designed to represent elegance and beauty while taking pride in the accomplishment witn just the right dose of humility. of a - just like how this MCP server lets Claude show off its filesystem powers.
 
 ---
 
