@@ -26,7 +26,12 @@ cd peacock
 
 ### 🐧 Linux (CosmicTosh)
 
-**Known to work with:** CosmicTosh (Debian-based custom Linux distro)
+**Known to work with:** CosmicTosh (Debian-based custom Linux distro running atop ZFS)
+
+
+### 🥪 Super Peacock! Hybrid - OpenCore macOS (Sonoma) paired with Archlinux (madOS)
+
+**Currently running dualboot OC Sonoma + madOS which is my forthcoming distribution that will NOT be opinionated!
 
 > ⚡️ **One of the first!** This was one of the earliest Linux MCP servers for Claude Desktop to hit the scene!
 
