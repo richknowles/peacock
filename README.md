@@ -8,6 +8,8 @@
 
 Peacock is a custom Model Context Protocol (MCP) server that gives Claude Desktop **full filesystem access and command execution** capabilities on your system.
 
+> ⚡️ **One of the first!** This was one of the earliest Linux MCP servers for Claude Desktop to hit the scene!
+
 **The big note** is as big as I can get it!
 
 **Do not use this** if you don't know what you are doing or, at the very least, do not know how to recover from installing this or breaking your system with this. Do you have break your wife's computer with this. Do not break anyone's computer with this. I will be happy to respond to any and all questions.
@@ -35,11 +37,11 @@ cd peacock
 **Known to work with:** CosmicTosh (Debian-based custom Linux distro running atop ZFS)
 
 
-### 🥪 Super Peacock! Hybrid - OpenCore macOS (Sonoma) paired with Archlinux (madOS)
+### 🥪 Super Peacock!
+> 🎲 **Hybrid** - OpenCore macOS (Sonoma) paired with Archlinux (madOS)
 
 **Currently running dualboot OC Sonoma + madOS which is my forthcoming distribution that will NOT be opinionated!
 
-> ⚡️ **One of the first!** This was one of the earliest Linux MCP servers for Claude Desktop to hit the scene!
 
 ```bash
 cd peacock
