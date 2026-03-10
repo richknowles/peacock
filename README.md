@@ -193,7 +193,7 @@ This project demonstrates:
 The name **Peacock** was chosen because... it makes sense and who doesn't love a good peacock? 🦚
 
 The logo was designed to represent elegance and beauty,
-*** 'while taking pride and humility in the accomplishment.'***
+** 'while taking pride and humility in the accomplishment.' **
 
 ---
 
