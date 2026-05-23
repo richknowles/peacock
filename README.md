@@ -12,9 +12,9 @@ Peacock is a custom Model Context Protocol (MCP) server that gives Claude Deskto
 
 **The big note** is as big as I can get it!
 
-**Do not use this** if you don't know what you are doing or, at the very least, do not know how to recover from installing this or breaking your system with this. Do you have break your wife's computer with this. Do not break anyone's computer with this. I will be happy to respond to any and all questions.
+**Do not use this** if you don't know what you are doing or, at the very least, do not know how to recover from installing this or breaking your system with this. Do **NOT** break your wife's computer with this. Do not break anyone's computer with this. I will be happy to respond to any and all questions.
 
-**I am not responsible** for any chaos or happy magic that ensues. The world must understand that you have to take security seriously when operating any computer. That being said, some people should not be given the keys to a toaster! Nor should they be given other destructive things like hand-grenades, computers, artificial intelligence or counterintelligence.
+**I am not responsible** for any chaos or dark magic that ensues. The world must understand that you have to take security seriously when operating any computer. That being said, some people should not be given the keys to a toaster! Nor should they be given other destructive things like hand-grenades, computers or artificial intelligence.
 
 **Why "Peacock"?**  
 Because the AI wants to show off! 🦚
