@@ -2,46 +2,44 @@
 # 🦚 PEACOCK INSTALLATION SCRIPT - macOS Edition 🦚
 # Built by Rich Knowles
 
+set -e
+
 echo "🦚 Installing Peacock MCP Server for macOS..."
 
-# Check if Python 3 is installed
+# Check Python 3
 if ! command -v python3 &> /dev/null; then
-    echo "❌ Python 3 is not installed!"
+    echo "❌ Python 3 is not installed. Install it from https://python.org"
     exit 1
 fi
-
 echo "✅ Python 3 found: $(python3 --version)"
 
-# Install Python dependencies (macOS doesn't need --break-system-packages)
-echo "📦 Installing Python dependencies..."
-pip3 install -r requirements.txt
+# Create virtual environment
+echo "📦 Creating virtual environment..."
+python3 -m venv .venv
+echo "✅ Virtual environment created"
 
-if [ $? -ne 0 ]; then
-    echo "❌ Failed to install dependencies"
-    exit 1
-fi
-
+# Install dependencies into venv
+echo "📦 Installing dependencies..."
+.venv/bin/pip install -q -r requirements.txt
 echo "✅ Dependencies installed"
 
-# Make the server executable
+# Make server executable
 chmod +x peacock_server.py
 
+PYTHON_PATH="$(pwd)/.venv/bin/python3"
+SERVER_PATH="$(pwd)/peacock_server.py"
+
 echo ""
-echo "🎉 Peacock installed successfully on macOS!"
+echo "🎉 Peacock installed successfully!"
 echo ""
-echo "📝 Next steps:"
-echo "1. Add this to ~/.config/Claude/claude_desktop_config.json:"
+echo "📝 Add this to ~/Library/Application Support/Claude/claude_desktop_config.json:"
 echo ""
-echo '{'
-echo '  "mcpServers": {'
-echo '    "peacock": {'
-echo '      "command": "python3",'
-echo '      "args": ['
-echo "        \"$(pwd)/peacock_server.py\""
-echo '      ]'
-echo '    }'
-echo '  }'
-echo '}'
+echo "  \"mcpServers\": {"
+echo "    \"peacock\": {"
+echo "      \"command\": \"$PYTHON_PATH\","
+echo "      \"args\": [\"$SERVER_PATH\"]"
+echo "    }"
+echo "  }"
 echo ""
 echo "2. Restart Claude Desktop"
 echo "3. Watch Me DRIVE! 🦚"

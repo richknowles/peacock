@@ -26,7 +26,7 @@ except ImportError:
     print("ERROR: FastMCP not installed. Run: pip install fastmcp")
     exit(1)
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 mcp = FastMCP("Peacock")
 
