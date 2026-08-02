@@ -320,17 +320,21 @@ def _browser_unavailable(name: str) -> str:
 
 @mcp.tool()
 def browser_open(url: str, browser: str = "chrome", headless: bool = False,
-                 attach: bool = True, cdp_port: int = 9222) -> str:
+                 attach: bool = True, cdp_port: int = 9222,
+                 cdp_host: str = "localhost") -> str:
     """
     Open a browser and navigate to a URL.
     browser: chrome (default) | firefox | safari | edge
     attach=True: for Chrome, attaches to an already-running instance via CDP — no launch delay.
     headless=True: run without a visible window (Chrome/Firefox/Edge only).
+    cdp_host: set to a remote IP/hostname to control Chrome on another machine
+              (e.g. your Mac or a Windows VM). Use browser_setup_ssh_tunnel first
+              for a secure connection, then leave cdp_host as 'localhost'.
     Returns a session ID used by all other browser_ tools.
     """
     if not BROWSER_AVAILABLE:
         return _browser_unavailable("browser_open")
-    return _browser.browser_open(url, browser, headless, attach, cdp_port)
+    return _browser.browser_open(url, browser, headless, attach, cdp_port, cdp_host)
 
 
 @mcp.tool()
@@ -486,6 +490,65 @@ def browser_bookmark_group(urls_and_titles: str, folder: str = "Peacock Watches"
     if not BROWSER_AVAILABLE:
         return _browser_unavailable("browser_bookmark_group")
     return _browser.browser_bookmark_group(urls_and_titles, folder, browser, session_id)
+
+
+@mcp.tool()
+def browser_open_tab_group(urls_and_titles: str, group_name: str = "Peacock",
+                            browser: str = "chrome", bookmark_also: bool = True,
+                            cdp_host: str = "localhost", cdp_port: int = 9222,
+                            session_id: Optional[str] = None) -> str:
+    """
+    Open a list of URLs as separate tabs and create a named Chrome tab group.
+    Also bookmarks them as a folder for later access.
+
+    urls_and_titles: JSON array of {url, title} objects, or one URL per line.
+    group_name: name for the Chrome tab group and bookmark folder.
+    bookmark_also: also save all URLs to a Chrome bookmark folder (default True).
+    cdp_host: hostname/IP of the machine running Chrome (default localhost).
+              Set to a remote IP to control Chrome on your Mac or Windows VM.
+              Example: browser_open_tab_group(urls, cdp_host='192.168.1.50')
+
+    Tab group creation requires Chrome 102+. If it fails, tabs stay open and
+    can be grouped manually: select all tabs → right-click → Add to new group.
+    """
+    if not BROWSER_AVAILABLE:
+        return _browser_unavailable("browser_open_tab_group")
+    return _browser.browser_open_tab_group(
+        urls_and_titles, group_name, browser, bookmark_also, cdp_host, cdp_port, session_id
+    )
+
+
+@mcp.tool()
+def browser_setup_ssh_tunnel(remote_host: str, remote_user: str,
+                              cdp_port: int = 9222,
+                              ssh_key: Optional[str] = None) -> str:
+    """
+    Create an SSH tunnel from this machine to a remote Chrome CDP port.
+    Use this when Peacock runs on an LXC/server and needs to control Chrome
+    on a Mac or Windows VM on the same network.
+
+    remote_host: IP or hostname of the machine running Chrome.
+    remote_user: SSH username on that machine.
+    cdp_port: the remote debugging port Chrome is listening on (default 9222).
+    ssh_key: path to SSH private key (optional).
+
+    Chrome on the remote machine must be started with:
+      --remote-debugging-port=<cdp_port>
+
+    After setup, use browser_open or browser_open_tab_group with
+    cdp_host='localhost' (the tunnel maps it through).
+    """
+    if not BROWSER_AVAILABLE:
+        return _browser_unavailable("browser_setup_ssh_tunnel")
+    return _browser.browser_setup_ssh_tunnel(remote_host, remote_user, cdp_port, ssh_key)
+
+
+@mcp.tool()
+def browser_close_ssh_tunnel() -> str:
+    """Stop the background SSH tunnel started by browser_setup_ssh_tunnel."""
+    if not BROWSER_AVAILABLE:
+        return _browser_unavailable("browser_close_ssh_tunnel")
+    return _browser.browser_close_ssh_tunnel()
 
 
 # ══════════════════════════════════════════════════════════════════════════════

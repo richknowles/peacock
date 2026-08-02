@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """
-🦚 Peacock Browser Automation — v1.1.2
+🦚 Peacock Browser Automation — v1.1.3
 Built by Rich Knowles
 
 Chrome: attaches to a running instance via CDP (zero launch overhead).
+Supports REMOTE Chrome via cdp_host parameter — connect from an LXC/VM
+to Chrome running on a Mac or Windows machine over the network or SSH tunnel.
 Firefox / Safari / Edge: driven via Selenium WebDriver.
 Works on macOS, Linux, and Windows.
 """
@@ -30,6 +32,7 @@ class BrowserSession:
         self.driver = None        # selenium WebDriver
         self.cdp: Optional["CDPSession"] = None
         self.cdp_port: int = 9222
+        self.cdp_host: str = "localhost"
 
     def close(self):
         if self.cdp:
@@ -95,17 +98,36 @@ class CDPSession:
             pass
 
 
-def _cdp_tabs(port: int = 9222) -> List[dict]:
+def _cdp_tabs(host: str = "localhost", port: int = 9222) -> List[dict]:
+    """
+    List open Chrome tabs via the CDP HTTP endpoint.
+    host may be a remote IP/hostname when controlling Chrome on another machine.
+    Chrome always returns ws://localhost:... in the WebSocket URL even for remote
+    connections, so we rewrite those to use the actual host.
+    """
     try:
         import requests
-        r = requests.get(f"http://localhost:{port}/json", timeout=3)
-        return [t for t in r.json() if t.get("type") == "page"]
+        r = requests.get(f"http://{host}:{port}/json", timeout=5)
+        tabs = [t for t in r.json() if t.get("type") == "page"]
+        if host not in ("localhost", "127.0.0.1"):
+            for tab in tabs:
+                ws = tab.get("webSocketDebuggerUrl", "")
+                ws = ws.replace("ws://localhost:", f"ws://{host}:")
+                ws = ws.replace("ws://127.0.0.1:", f"ws://{host}:")
+                tab["webSocketDebuggerUrl"] = ws
+        return tabs
     except Exception:
         return []
 
 
-def _launch_chrome_cdp(port: int = 9222, url: str = "about:blank") -> bool:
-    """Launch Chrome with remote-debugging enabled, wait until it responds."""
+def _launch_chrome_cdp(host: str = "localhost", port: int = 9222,
+                        url: str = "about:blank") -> bool:
+    """
+    Launch Chrome locally with remote-debugging enabled and wait until it responds.
+    Only used when host is localhost — cannot launch Chrome on a remote machine.
+    """
+    if host not in ("localhost", "127.0.0.1"):
+        return False  # can't launch Chrome on a remote host
     exe = _chrome_exe()
     if not exe:
         return False
@@ -121,7 +143,7 @@ def _launch_chrome_cdp(port: int = 9222, url: str = "about:blank") -> bool:
     subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(30):
         time.sleep(0.5)
-        if _cdp_tabs(port):
+        if _cdp_tabs(host, port):
             return True
     return False
 
@@ -287,11 +309,16 @@ def _selenium_driver(browser: str, headless: bool = False):
 # ─── Public Tool Implementations ──────────────────────────────────────────────
 
 def browser_open(url: str, browser: str = "chrome", headless: bool = False,
-                 attach: bool = True, cdp_port: int = 9222) -> str:
+                 attach: bool = True, cdp_port: int = 9222,
+                 cdp_host: str = "localhost") -> str:
     """
     Open a browser and navigate to a URL.
     For Chrome: attaches to a running instance first (fastest — no launch delay).
-    If Chrome is not running, launches it with CDP remote-debugging enabled.
+    cdp_host: hostname or IP of the machine running Chrome. Use 'localhost' for
+              the same machine, or a remote IP/hostname (e.g. '192.168.1.50') to
+              control Chrome on another machine. SSH tunnel recommended for security:
+              ssh -L 9222:localhost:9222 user@remote-host -N
+    If Chrome is not running locally, launches it with CDP remote-debugging enabled.
     Falls back to Selenium for Firefox, Safari, and Edge.
     Returns a session_id for use with other browser tools.
     """
@@ -300,10 +327,10 @@ def browser_open(url: str, browser: str = "chrome", headless: bool = False,
     sid = _new_sid()
 
     if browser in ("chrome", "chromium") and attach:
-        tabs = _cdp_tabs(cdp_port)
+        tabs = _cdp_tabs(cdp_host, cdp_port)
         if not tabs:
-            _launch_chrome_cdp(cdp_port, url)
-            tabs = _cdp_tabs(cdp_port)
+            _launch_chrome_cdp(cdp_host, cdp_port, url)
+            tabs = _cdp_tabs(cdp_host, cdp_port)
 
         if tabs:
             ws_url = tabs[0]["webSocketDebuggerUrl"]
@@ -314,9 +341,11 @@ def browser_open(url: str, browser: str = "chrome", headless: bool = False,
             session = BrowserSession(sid, browser, "cdp")
             session.cdp = cdp
             session.cdp_port = cdp_port
+            session.cdp_host = cdp_host
             _sessions[sid] = session
             _active_sid = sid
-            return f"✅ Chrome attached via CDP | session: {sid}\n🌐 {url}"
+            location = f"remote ({cdp_host})" if cdp_host not in ("localhost", "127.0.0.1") else "local"
+            return f"✅ Chrome attached via CDP [{location}] | session: {sid}\n🌐 {url}"
 
     try:
         drv = _selenium_driver(browser, headless)
@@ -353,10 +382,15 @@ def browser_new_tab(url: str = "about:blank", session_id: Optional[str] = None) 
     try:
         if s.mode == "cdp":
             import requests
-            r = requests.put(f"http://localhost:{s.cdp_port}/json/new", timeout=5)
+            r = requests.put(f"http://{s.cdp_host}:{s.cdp_port}/json/new", timeout=5)
             tab = r.json()
-            if url and url != "about:blank":
-                cdp = CDPSession(tab["webSocketDebuggerUrl"])
+            if tab.get("webSocketDebuggerUrl") and url and url != "about:blank":
+                ws = tab["webSocketDebuggerUrl"]
+                # Rewrite localhost to actual host for remote connections
+                if s.cdp_host not in ("localhost", "127.0.0.1"):
+                    ws = ws.replace("ws://localhost:", f"ws://{s.cdp_host}:").replace(
+                        "ws://127.0.0.1:", f"ws://{s.cdp_host}:")
+                cdp = CDPSession(ws)
                 cdp.send("Page.navigate", {"url": url})
                 cdp.close()
             return f"✅ New tab opened: {url}"
@@ -375,12 +409,12 @@ def browser_close_tab(session_id: Optional[str] = None) -> str:
         return "❌ No active browser session."
     try:
         if s.mode == "cdp":
-            tabs = _cdp_tabs(s.cdp_port)
+            tabs = _cdp_tabs(s.cdp_host, s.cdp_port)
             if tabs:
                 tab_id = tabs[0]["id"]
                 import requests
-                requests.get(f"http://localhost:{s.cdp_port}/json/close/{tab_id}", timeout=5)
-                tabs_remaining = _cdp_tabs(s.cdp_port)
+                requests.get(f"http://{s.cdp_host}:{s.cdp_port}/json/close/{tab_id}", timeout=5)
+                tabs_remaining = _cdp_tabs(s.cdp_host, s.cdp_port)
                 if tabs_remaining:
                     s.cdp = CDPSession(tabs_remaining[0]["webSocketDebuggerUrl"])
             return "✅ Tab closed"
@@ -597,7 +631,7 @@ def browser_list_tabs(session_id: Optional[str] = None) -> str:
         return "❌ No active browser session."
     try:
         if s.mode == "cdp":
-            tabs = _cdp_tabs(s.cdp_port)
+            tabs = _cdp_tabs(s.cdp_host, s.cdp_port)
             if not tabs:
                 return "📭 No open tabs"
             lines = [f"📑 Open tabs ({len(tabs)}):"]
@@ -706,3 +740,183 @@ def browser_bookmark_group(urls_and_titles: str, folder: str = "Peacock Watches"
     lines = [f"📁 Bookmark folder '{folder}' — {ok}/{len(entries)} added:"]
     lines += [f"  {r}" for r in results]
     return "\n".join(lines)
+
+
+def browser_open_tab_group(urls_and_titles: str, group_name: str = "Peacock",
+                            browser: str = "chrome", bookmark_also: bool = True,
+                            cdp_host: str = "localhost", cdp_port: int = 9222,
+                            session_id: Optional[str] = None) -> str:
+    """
+    Open a list of URLs as separate tabs and attempt to create a named Chrome tab group.
+    Also bookmarks them as a folder for later access.
+
+    urls_and_titles: JSON array of {url, title} objects, or one URL per line.
+    group_name: name for the Chrome tab group and bookmark folder.
+    bookmark_also: also save all URLs to a Chrome bookmark folder (default True).
+    cdp_host: hostname/IP of the machine running Chrome (default localhost).
+              Use a remote IP to control Chrome on your Mac or Windows VM.
+
+    Tab group creation requires Chrome 102+ and works best on local Chrome.
+    If grouping fails, the tabs remain open and you can group them manually
+    (select all product tabs → right-click → Add tabs to new group).
+    """
+    try:
+        entries = json.loads(urls_and_titles)
+        if isinstance(entries, dict):
+            entries = [entries]
+    except (json.JSONDecodeError, TypeError):
+        raw = [l.strip() for l in str(urls_and_titles).splitlines() if l.strip()]
+        entries = [{"url": l, "title": l} for l in raw]
+
+    if not entries:
+        return "❌ No URLs provided"
+
+    results = []
+
+    # Open or reuse a browser session
+    s = _get_session(session_id)
+    if not s:
+        first = entries[0]
+        url0 = first.get("url", first) if isinstance(first, dict) else str(first)
+        open_result = browser_open(url0, browser, cdp_host=cdp_host, cdp_port=cdp_port)
+        results.append(f"Tab 1: {open_result.splitlines()[0]}")
+        s = _get_session()
+        remaining = entries[1:]
+    else:
+        remaining = entries
+
+    # Open remaining URLs as new tabs
+    for i, entry in enumerate(remaining, start=2):
+        url = entry.get("url", entry) if isinstance(entry, dict) else str(entry)
+        r = browser_new_tab(url, s.session_id if s else None)
+        results.append(f"Tab {i}: {r}")
+
+    # Attempt tab group creation via CDP (Chrome 102+)
+    group_created = False
+    if s and s.mode == "cdp":
+        try:
+            tabs = _cdp_tabs(s.cdp_host, s.cdp_port)
+            if len(tabs) >= len(entries):
+                # Collect target IDs for the tabs we just opened
+                target_ids = [t["id"] for t in tabs[:len(entries)]]
+                # Try the experimental grouping API
+                group_result = s.cdp.send("Target.createTargetGroup", {
+                    "title": group_name,
+                    "targetIds": target_ids,
+                })
+                if group_result is not None:
+                    group_created = True
+        except Exception:
+            pass
+
+        if not group_created:
+            # Fallback: use JS to attempt grouping via chrome.tabs (extension context only)
+            # This won't work from page context but we try anyway for future Chrome versions
+            try:
+                tab_ids_js = json.dumps([int(t["id"]) for t in _cdp_tabs(s.cdp_host, s.cdp_port)[:len(entries)]])
+                s.cdp.send("Runtime.evaluate", {
+                    "expression": f"""
+                        if (typeof chrome !== 'undefined' && chrome.tabs) {{
+                            chrome.tabs.group({{tabIds: {tab_ids_js}}}, function(groupId) {{
+                                chrome.tabGroups.update(groupId, {{title: {json.dumps(group_name)}, color: 'blue'}});
+                            }});
+                        }}
+                    """,
+                    "returnByValue": True,
+                })
+            except Exception:
+                pass
+
+    # Bookmark them all as a folder
+    bm_result = ""
+    if bookmark_also:
+        bm_result = browser_bookmark_group(urls_and_titles, group_name, browser, s.session_id if s else None)
+
+    # Build summary
+    summary = [
+        f"🦚 Tab group '{group_name}' — {len(entries)} tabs:",
+        *[f"  {r}" for r in results],
+        "",
+        f"📑 Tab group auto-created: {'✅ yes' if group_created else '⚠️  Chrome 102+ API unavailable — tabs are open, group them manually:'}",
+    ]
+    if not group_created:
+        summary.append("   Select all tabs → right-click → 'Add tabs to new group' → name it.")
+    if bm_result:
+        summary += ["", "📁 Also bookmarked:", bm_result]
+    return "\n".join(summary)
+
+
+def browser_setup_ssh_tunnel(remote_host: str, remote_user: str,
+                              cdp_port: int = 9222,
+                              ssh_key: Optional[str] = None) -> str:
+    """
+    Create an SSH tunnel from this machine to a remote Chrome CDP port.
+    After calling this, use browser_open(cdp_host='localhost', cdp_port=<port>)
+    to control Chrome on the remote machine as if it were local.
+
+    remote_host: IP or hostname of the Mac or Windows machine running Chrome.
+    remote_user: SSH username on that machine.
+    ssh_key: path to SSH private key file (optional, uses default key if omitted).
+    cdp_port: the remote debugging port Chrome is listening on (default 9222).
+
+    The tunnel runs in the background. Call browser_close_ssh_tunnel() to stop it.
+    Chrome on the remote machine must be started with:
+      --remote-debugging-port=<cdp_port>
+    """
+    global _ssh_tunnel_proc
+
+    # Kill any existing tunnel on this port
+    browser_close_ssh_tunnel()
+
+    ssh_cmd = ["ssh", "-N", "-L", f"{cdp_port}:localhost:{cdp_port}"]
+    if ssh_key:
+        ssh_cmd += ["-i", ssh_key]
+    ssh_cmd += [f"{remote_user}@{remote_host}"]
+
+    try:
+        proc = subprocess.Popen(
+            ssh_cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+        _ssh_tunnel_proc = proc
+
+        # Wait up to 5s for the tunnel to come up
+        for _ in range(10):
+            time.sleep(0.5)
+            tabs = _cdp_tabs("localhost", cdp_port)
+            if tabs:
+                return (
+                    f"✅ SSH tunnel established: localhost:{cdp_port} → {remote_host}:{cdp_port}\n"
+                    f"   Chrome has {len(tabs)} open tab(s).\n"
+                    f"   Now use: browser_open(url, cdp_host='localhost', cdp_port={cdp_port})"
+                )
+
+        # Tunnel is up but Chrome may not be running yet
+        if proc.poll() is None:
+            return (
+                f"✅ SSH tunnel running (PID {proc.pid}): localhost:{cdp_port} → {remote_host}:{cdp_port}\n"
+                f"⚠️  No Chrome tabs detected yet. Start Chrome on {remote_host} with:\n"
+                f"   google-chrome --remote-debugging-port={cdp_port}\n"
+                f"   Then call: browser_open(url, cdp_host='localhost', cdp_port={cdp_port})"
+            )
+        stderr = proc.stderr.read().decode(errors="ignore")
+        return f"❌ SSH tunnel failed to start: {stderr}"
+    except FileNotFoundError:
+        return "❌ ssh not found. Install OpenSSH: sudo apt install openssh-client"
+    except Exception as e:
+        return f"❌ SSH tunnel error: {e}"
+
+
+_ssh_tunnel_proc = None
+
+
+def browser_close_ssh_tunnel() -> str:
+    """Stop the background SSH tunnel started by browser_setup_ssh_tunnel."""
+    global _ssh_tunnel_proc
+    if _ssh_tunnel_proc and _ssh_tunnel_proc.poll() is None:
+        _ssh_tunnel_proc.terminate()
+        _ssh_tunnel_proc = None
+        return "✅ SSH tunnel closed"
+    _ssh_tunnel_proc = None
+    return "📭 No active SSH tunnel"
