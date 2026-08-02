@@ -770,6 +770,289 @@ def remove_scheduled_task(name: str) -> str:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# MAC / SAFARI TOOLS  (work from any platform via SSH → osascript)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _run_on_mac(script: str, mac_host: str, mac_user: str,
+                ssh_key: Optional[str] = None) -> tuple[int, str, str]:
+    """
+    Execute an AppleScript on a Mac, either locally (mac_host empty / localhost)
+    or remotely via SSH. Returns (returncode, stdout, stderr).
+    """
+    osascript_cmd = ["osascript", "-e", script]
+
+    if not mac_host or mac_host in ("localhost", "127.0.0.1"):
+        result = subprocess.run(osascript_cmd, capture_output=True, text=True, timeout=30)
+        return result.returncode, result.stdout.strip(), result.stderr.strip()
+
+    ssh_cmd = ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes"]
+    if ssh_key:
+        ssh_cmd += ["-i", ssh_key]
+    ssh_cmd.append(f"{mac_user}@{mac_host}")
+    # Pass the AppleScript to osascript on the remote Mac via stdin
+    ssh_cmd += ["osascript", "-"]
+    result = subprocess.run(ssh_cmd, input=script, capture_output=True, text=True, timeout=30)
+    return result.returncode, result.stdout.strip(), result.stderr.strip()
+
+
+def _build_safari_applescript(entries: list[dict], folder: str,
+                               open_tabs: bool, create_tab_group: bool) -> str:
+    """
+    Generate AppleScript that opens URLs in Safari and/or bookmarks them.
+    Handles quote-escaping so URLs and titles are safe inside the script.
+    """
+    def esc(s: str) -> str:
+        return s.replace("\\", "\\\\").replace('"', '\\"')
+
+    lines = ['tell application "Safari"', "    activate"]
+
+    if open_tabs:
+        lines += [
+            "    -- Open a new window if Safari has none",
+            "    if (count of windows) = 0 then make new document",
+            "    set w to window 1",
+        ]
+        for i, e in enumerate(entries):
+            url = esc(e.get("url", ""))
+            if i == 0:
+                lines.append(f'    set URL of current tab of w to "{url}"')
+            else:
+                lines.append(f'    tell w to make new tab with properties {{URL:"{url}"}}')
+
+    if create_tab_group and open_tabs:
+        # Safari 15+ Tab Groups via AppleScript (macOS Monterey+)
+        folder_esc = esc(folder)
+        lines += [
+            f'    -- Attempt to create a Tab Group (Safari 15+ / macOS Monterey+)',
+            f'    try',
+            f'        make new tab group at end of tab groups with properties {{name:"{folder_esc}"}}',
+            f'        set tg to last tab group',
+            f'        repeat with t in tabs of w',
+            f'            move t to end of tabs of tg',
+            f'        end repeat',
+            f'    end try',
+        ]
+
+    # Bookmark each URL into a named folder
+    folder_esc = esc(folder)
+    lines += [
+        f'    -- Create bookmark folder "{folder}" if it does not exist',
+        f'    if not (exists bookmark folder "{folder_esc}" of bookmarks bar) then',
+        f'        make new bookmark folder at end of bookmarks bar with properties {{name:"{folder_esc}"}}',
+        f'    end if',
+        f'    set bkFolder to bookmark folder "{folder_esc}" of bookmarks bar',
+    ]
+    for e in entries:
+        url = esc(e.get("url", ""))
+        title = esc(e.get("title", e.get("url", "")))
+        lines.append(
+            f'    make new bookmark at end of bkFolder'
+            f' with properties {{name:"{title}", URL:"{url}"}}'
+        )
+
+    lines.append("end tell")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def mac_safari_open_and_bookmark(
+    urls_and_titles: str,
+    folder: str = "Peacock Watches",
+    open_tabs: bool = True,
+    create_tab_group: bool = True,
+    mac_host: str = "",
+    mac_user: str = "",
+    ssh_key: Optional[str] = None,
+) -> str:
+    """
+    Open URLs in Safari on a Mac and bookmark them in a named folder.
+    Works from a remote LXC or any machine by SSHing to the Mac.
+
+    urls_and_titles: JSON array of {url, title} objects, or one URL per line.
+    folder: bookmark folder name to create or reuse (default 'Peacock Watches').
+    open_tabs: also open each URL as a Safari tab right now (default True).
+    create_tab_group: attempt to create a Safari Tab Group (Safari 15+ / macOS Monterey+).
+    mac_host: IP or hostname of the Mac. Leave empty or 'localhost' if Peacock
+              is running directly on the Mac.
+    mac_user: SSH username on the Mac (required when mac_host is a remote address).
+    ssh_key: path to SSH private key file on this machine (optional).
+
+    One-time Mac setup required:
+      1. Enable SSH on the Mac: System Settings → General → Sharing → Remote Login → On
+      2. Authorise the LXC's SSH key: ssh-copy-id mac_user@mac_host
+      3. No other setup needed — osascript is built into macOS.
+    """
+    import json as _json
+
+    try:
+        entries = _json.loads(urls_and_titles)
+        if isinstance(entries, dict):
+            entries = [entries]
+    except (_json.JSONDecodeError, TypeError):
+        raw = [l.strip() for l in str(urls_and_titles).splitlines() if l.strip()]
+        entries = [{"url": l, "title": l} for l in raw]
+
+    if not entries:
+        return "❌ No URLs provided"
+
+    script = _build_safari_applescript(entries, folder, open_tabs, create_tab_group)
+
+    try:
+        rc, stdout, stderr = _run_on_mac(script, mac_host, mac_user, ssh_key)
+    except subprocess.TimeoutExpired:
+        return "❌ Timed out waiting for Safari to respond (30s)"
+    except FileNotFoundError:
+        return "❌ ssh not found. Install: sudo apt install openssh-client"
+    except Exception as e:
+        return f"❌ Failed to run on Mac: {e}"
+
+    if rc != 0:
+        return (
+            f"❌ AppleScript error (exit {rc}): {stderr or stdout}\n"
+            f"💡 Ensure Remote Login is enabled on the Mac:\n"
+            f"   System Settings → General → Sharing → Remote Login → On\n"
+            f"   Also run: ssh-copy-id {mac_user}@{mac_host}"
+        )
+
+    tab_group_note = " + Tab Group (if Safari 15+)" if create_tab_group else ""
+    tab_note = f", {len(entries)} tab(s) opened{tab_group_note}" if open_tabs else ""
+    return (
+        f"✅ Safari: {len(entries)} URL(s) bookmarked in '{folder}'{tab_note}\n"
+        + "\n".join(f"  • {e.get('title', e.get('url', ''))} — {e.get('url', '')}"
+                    for e in entries)
+    )
+
+
+@mcp.tool()
+def mac_chrome_open_and_bookmark(
+    urls_and_titles: str,
+    folder: str = "Peacock Watches",
+    open_tabs: bool = True,
+    mac_host: str = "",
+    mac_user: str = "",
+    ssh_key: Optional[str] = None,
+) -> str:
+    """
+    Open URLs in Chrome on a Mac and bookmark them, using AppleScript via SSH.
+    Use this when you want Mac Chrome tabs without setting up a CDP tunnel.
+
+    urls_and_titles: JSON array of {url, title} objects, or one URL per line.
+    folder: Chrome bookmark folder name (written to the Bookmarks JSON file).
+    open_tabs: also open each URL as a Chrome tab right now (default True).
+    mac_host: IP or hostname of the Mac (leave empty if already on the Mac).
+    mac_user: SSH username on the Mac.
+    ssh_key: path to SSH private key file (optional).
+    """
+    import json as _json
+
+    try:
+        entries = _json.loads(urls_and_titles)
+        if isinstance(entries, dict):
+            entries = [entries]
+    except (_json.JSONDecodeError, TypeError):
+        raw = [l.strip() for l in str(urls_and_titles).splitlines() if l.strip()]
+        entries = [{"url": l, "title": l} for l in raw]
+
+    if not entries:
+        return "❌ No URLs provided"
+
+    def esc(s: str) -> str:
+        return s.replace("\\", "\\\\").replace('"', '\\"')
+
+    lines = ['tell application "Google Chrome"', "    activate"]
+    if open_tabs:
+        lines += [
+            "    if (count of windows) = 0 then make new window",
+            "    set w to window 1",
+        ]
+        for i, e in enumerate(entries):
+            url = esc(e.get("url", ""))
+            if i == 0:
+                lines.append(f'    set URL of active tab of w to "{url}"')
+            else:
+                lines.append(f'    make new tab at end of tabs of w with properties {{URL:"{url}"}}')
+    lines.append("end tell")
+    open_script = "\n".join(lines)
+
+    results = []
+
+    if open_tabs:
+        rc, stdout, stderr = _run_on_mac(open_script, mac_host, mac_user, ssh_key)
+        if rc != 0:
+            results.append(f"⚠️  Tab open error: {stderr or stdout}")
+        else:
+            results.append(f"✅ Opened {len(entries)} tab(s) in Mac Chrome")
+
+    # Bookmark by remotely editing the Bookmarks file via Python
+    bm_py = f"""
+import json, time, os
+from pathlib import Path
+
+bm_path = Path.home() / 'Library/Application Support/Google/Chrome/Default/Bookmarks'
+if not bm_path.exists():
+    print('NOT_FOUND')
+    exit(1)
+
+with open(bm_path) as f:
+    data = json.load(f)
+
+roots = data.get('roots', {{}})
+bar = roots.get('bookmark_bar', {{}})
+
+def find_or_create(node, name):
+    for c in node.get('children', []):
+        if c.get('type') == 'folder' and c.get('name') == name:
+            return c
+    new = {{'children':[],'date_added':str(int(time.time()*1000000)),
+             'date_last_used':'0','date_modified':'0',
+             'guid':f'peacock-f-{{int(time.time())}}',
+             'id':str(int(time.time())),'name':name,'type':'folder'}}
+    node.setdefault('children',[]).append(new)
+    return new
+
+target = find_or_create(bar, {_json.dumps(folder)})
+entries = {_json.dumps(entries)}
+
+for e in entries:
+    target['children'].append({{
+        'date_added':str(int(time.time()*1000000)),'date_last_used':'0',
+        'guid':f'peacock-bm-{{int(time.time())}}','id':str(int(time.time())),
+        'name':e.get('title',e.get('url','')),'type':'url','url':e.get('url','')
+    }})
+
+data['checksum'] = ''
+with open(bm_path,'w') as f:
+    json.dump(data, f, indent=3)
+print('OK')
+"""
+
+    bm_script = f'do shell script "python3 -c \\" + chr(10) + {repr(bm_py)} + chr(10) + \\""'
+    # Simpler: run python3 directly via SSH, not through AppleScript
+    if not mac_host or mac_host in ("localhost", "127.0.0.1"):
+        import sys
+        proc = subprocess.run([sys.executable, "-c", bm_py],
+                              capture_output=True, text=True, timeout=15)
+        rc2, out2 = proc.returncode, proc.stdout.strip() or proc.stderr.strip()
+    else:
+        ssh_cmd = ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes"]
+        if ssh_key:
+            ssh_cmd += ["-i", ssh_key]
+        ssh_cmd.append(f"{mac_user}@{mac_host}")
+        ssh_cmd += ["python3", "-"]
+        proc = subprocess.run(ssh_cmd, input=bm_py, capture_output=True, text=True, timeout=15)
+        rc2, out2 = proc.returncode, proc.stdout.strip() or proc.stderr.strip()
+
+    if rc2 == 0 and "OK" in out2:
+        results.append(f"✅ Bookmarked {len(entries)} URL(s) in '{folder}' (restart Chrome to see)")
+    else:
+        results.append(f"⚠️  Bookmark write: {out2 or 'unknown error'}")
+
+    return "\n".join(results) + "\n" + "\n".join(
+        f"  • {e.get('title', e.get('url',''))} — {e.get('url','')}" for e in entries
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # ENTRY POINT
 # ══════════════════════════════════════════════════════════════════════════════
 
