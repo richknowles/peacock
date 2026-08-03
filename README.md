@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="peacock_branding_1024x1024.jpeg" alt="Peacock" width="320"/>
+  <img src="peacock_branding_1024x1024.png" alt="Peacock" width="320"/>
 </p>
 
 <h1 align="center">🦚 Peacock MCP Server</h1>
